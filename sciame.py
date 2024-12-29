@@ -150,6 +150,7 @@ def simulazione_sciame(E0, s, angolo):
         quota-= spost_vert
 
     particelle_rivelate = len(sciame)
+    return particelle_rivelate
 
 
 
