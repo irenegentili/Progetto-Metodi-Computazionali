@@ -9,8 +9,8 @@ quotariv = 4e5 # quota rivelatore (cm)
 Ec_elet = 87.92 # energia critica elettroni (MeV)
 Ec_pos = 85.97 # energia critica positroni (MeV)
 c = 3e10 # (cm/s)
-m_e = 0.51/c**2 #(MeV(c**2)
-en_coppia = 2*m_e*c**2 # energia legata alla produzione di coppie (MeV)
+Er= 0.51 #( energia a riposo elettrone e positrone MeV)
+en_coppia = 2*Er # energia legata alla produzione di coppie (MeV)
 min_ioniz = 2.187e-3 # minimo di ionizzazione (MeV/cm)
 
 
@@ -21,12 +21,12 @@ def prob_brems(s):
     interagisca per Bremsstrahlung  
     s: passo di avanzamento della simulazione in frazioni di X0 (compreso tra 0 e 1)
 
-    probabilità= 1-np.exp(-s)
+    probabilita= 1-np.exp(-s)
 
-    return probabilità: valore della probabilità del processo
+    return probabilita: valore della probabilità del processo
     """   
-    probabilità = 1-np.exp(-s)
-    return probabilità
+    probabilita = 1-np.exp(-s)
+    return probabilita
 
 def prob_coppia(s):
 
@@ -35,19 +35,19 @@ def prob_coppia(s):
     del fotone
     s: passo di avanzamento della simulazione in frazioni di X0 (compreso tra 0 e 1)
 
-   probabilità= 1-np.exp(-7*s/9)
+    probabilita= 1-np.exp(-7*s/9)
 
-    return probabilità: valore della probabilità del processo
+    return probabilita: valore della probabilità del processo
     """
-    probabilità = 1-np.exp(-7*s/9)
+    probabilita = 1-np.exp(-7*s/9)
     
-    return probabilità
+    return probabilita
 
 def perdita_ionizzazione(index, df, s):
     """
     funzione perdita_ionizzazione(s,E) per determinare l'energia residua 
     dopo il processo di ionizzazione di e+ o e-
-    index: indice della particella
+    index: indice della particella nel dataframe
     df: dataframe con le particelle dello sciame
     s: passo di avanzamento della simulazione in frazioni di X0 (compreso tra 0 e 1)
     """
@@ -62,7 +62,7 @@ def aggiungi_part(df, dict):
 
     return dataframe con le particelle aggiornate
     """
-    new_df = pd.DataFrame(dict)  # Creo un DataFrame dai dizionari
+    new_df = pd.DataFrame(dict)  # Creo un DataFrame dalla lista di dizionari
     return pd.merge(df, new_df, how='outer')
 
 def genera_particella_iniziale(E0):
@@ -70,10 +70,12 @@ def genera_particella_iniziale(E0):
     funzione che genera in modo casuale la particella iniziale, scegliendo tra 
     elettrone, positrone, fotone.
 
+    E0: energia iniziale della particella
+
     return particella: un dizionario dove si specifica il tipo e l'energia della particella iniziale
     """
     tipo= np.random.choice(['elettrone', 'positrone', 'fotone'])
-    particella = {'tipo':tipo,'energia': E0 }
+    particella = {'tipo':tipo,'energia': E0}
     return particella
 
 
@@ -86,19 +88,19 @@ def simulazione_sciame(E0, s=0.1, angolo=0):
     angolo=0: angolo di inclinazione rispetto alla verticale della particella iniziale (si ritiene lo stesso anche per le particelle secondarie). 
     0 gradi è il valore di default
 
-    return particelle_rivelate: numero di particelle rivelate dal rivelatore
+    return particelle_rivelate: numero di particelle rivelate dal rivelatore, quotamin: quota minima raggiunta, part_finali: particelle rivelate
     """
 
     quota = quotainiz
     spost_vert = s*np.cos(np.deg2rad(angolo))*X0
 
-    sciame = pd.DataFrame( columns=['tipo', 'energia'])
+    sciame = pd.DataFrame( columns=['tipo', 'energia']) #creo il df contenente lo sciame
     primapart = genera_particella_iniziale(E0) #genero casualmente la particella iniziale
-    sciame= aggiungi_part(sciame, [primapart])
+    sciame= aggiungi_part(sciame, [primapart]) #aggiungo la prima particella allo sciame
 
     while quota > quotariv and len(sciame)!=0:
 
-        #creo una lista per memorizzare le particelle ottenute dai vari processi
+        #creo una lista per memorizzare le particelle nuove ottenute dai vari processi
         new_particelle= [] 
 
         #creo una lista di particelle da eliminare
@@ -119,7 +121,7 @@ def simulazione_sciame(E0, s=0.1, angolo=0):
                 if E > min_ioniz*s*X0 :
                     sciame= perdita_ionizzazione(index, sciame, s)
                 else:
-                    print(f"Elimino {tipo} con energia {E:.2f} MeV perchè E<E_min *s*X0 con E_min pari all'energia di Minimum ionization (MeV/cm) ")
+                    #print(f"Elimino {tipo} con energia {E:.2f} MeV perchè E<E_min *s*X0 con E_min pari all'energia di Minimum ionization (MeV/cm) ")
                     drop_particelle.append(index)
 
                 if np.random.uniform() < prob_brems(s) and E>Ec:
@@ -135,17 +137,18 @@ def simulazione_sciame(E0, s=0.1, angolo=0):
                         new_particelle.append({'tipo': 'positrone', 'energia': float(E)/2})
                         new_particelle.append({'tipo': 'elettrone', 'energia': float(E)/2})
                 else:
-                    print(f"Elimino {tipo} con energia {E:.2f} MeV perchè  E < 2*m_e *c^2")
+                    #print(f"Elimino {tipo} con energia {E:.2f} MeV perchè  E < 2*m_e *c^2")
                     drop_particelle.append(index)
         sciame = sciame.drop(drop_particelle, axis=0)
         if new_particelle:
             sciame= aggiungi_part(sciame, new_particelle)
-        print(sciame)
         
         quota=float(quota) - spost_vert
 
+    quotamin = quota
     particelle_rivelate = len(sciame)
-    return particelle_rivelate
+
+    return particelle_rivelate, quotamin
 
 
 
