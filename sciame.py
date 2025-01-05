@@ -88,7 +88,7 @@ def simulazione_sciame(E0, s=0.1, angolo=0):
     angolo=0: angolo di inclinazione rispetto alla verticale della particella iniziale (si ritiene lo stesso anche per le particelle secondarie). 
     0 gradi è il valore di default
 
-    return particelle_rivelate: numero di particelle rivelate dal rivelatore, quotamin: quota minima raggiunta, part_finali: particelle rivelate
+    return particelle_rivelate: numero di particelle rivelate dal rivelatore
     """
 
     quota = quotainiz
@@ -145,10 +145,9 @@ def simulazione_sciame(E0, s=0.1, angolo=0):
         
         quota=float(quota) - spost_vert
 
-    quotamin = quota
     particelle_rivelate = len(sciame)
 
-    return particelle_rivelate, quotamin
+    return particelle_rivelate
 
 
 
