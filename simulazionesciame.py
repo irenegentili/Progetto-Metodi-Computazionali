@@ -10,16 +10,7 @@ import time
 
 tqdm.pandas()
 
-plt.rcParams.update({
-    "text.usetex": True,
-    "font.family": "serif",
-    "font.serif": ["Latin Modern Roman"],
-    "font.size": 12,
-    "axes.titlesize": 16,  
-    "axes.labelsize": 12,
-    "xtick.labelsize": 10, 
-    "ytick.labelsize": 10, 
-}) 
+
 
 def parse_arguments():
 
@@ -62,20 +53,21 @@ def analisi_sciame():
         if not (s>=0 and s>=1):
             print('inserire un valore di s compreso tra 0 e 1')
 
-        print(f'simulazione effettuata per {n} valori di energia E (MeV), {E_min}<E<{E_max} e 4 valori di angoli (°) compresi tra {ang_min} e {ang_max}, con passo {s}')
+        print(f'simulazione effettuata per {n} valori di energia E, {int(E_min)}MeV<E<{int(E_max)}MeV e 4 valori di angoli compresi tra {ang_min}° e {ang_max}°, con passo {s}')
         #creo il dataframe per contenere i risultati della simulazione
         df_risultati = pd.DataFrame(index=pd.MultiIndex.from_product([energie, angoli], names=['energia', 'angolo'])).reset_index()
         
         #per ogni coppia energia-angolo riempio il dataframe con il numero di particelle rivelate e la quota minima raggiunta
-        df_risultati[['num particelle rivelate', 'quotamin']] = pd.DataFrame(df_risultati.progress_apply(lambda x: sa.simulazione_sciame(x['energia'], s, x['angolo']), axis=1).tolist())
+        df_risultati['num particelle rivelate'] = pd.DataFrame(df_risultati.progress_apply(lambda x: sa.simulazione_sciame(x['energia'], s, x['angolo']), axis=1))
 
         
         print('il numero di particelle rivelate e la quota minima raggiunta per ogni coppia energia-angolo è:')
         for _,row in df_risultati.iterrows():
-            print(f"Energia iniziale {row['energia']}, Angolo: {row['angolo']}, numero particelle rivelate: {row['num particelle rivelate']}, quota minima: {row['quotamin']}")
+            print(f"Energia iniziale {row['energia']}, Angolo: {row['angolo']}, numero particelle rivelate: {row['num particelle rivelate']}")
 
         #istogramma 3D e 2D
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12,6), subplot_kw={'projection':'3d'})
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12,6))
+        ax1 = fig.add_subplot(1, 2, 1, projection='3d') 
 
         for i, angolo in enumerate(angoli):
             ang = df_risultati.loc[df_risultati['angolo']== angolo] #dataframe per i valori relativi a quell'angolo
@@ -83,12 +75,12 @@ def analisi_sciame():
                 dx=np.full(len(ang['energia']),750), dy=np.full(len(ang['angolo']), 4),
                     dz=ang['num particelle rivelate'], color=colori[i], alpha=0.6)
             
-            ax2.hist (ang['energia'], bins=20, weights = ang['num particelle rivelate'], range=(1e3 -5, 100e3 +5), color=colori[i], alpha=0.5, label=f'Angolo={angolo}°' )
+            ax2.hist (ang['energia'], bins=20, weights = ang['num particelle rivelate'], range=(1e6 -5, 1e8 +5), color=colori[i], alpha=0.5, label=f'Angolo={angolo}°' )
 
         ax1.set_xlabel('Energia (MeV)')
         ax1.set_ylabel('angoli (°)')
         ax1.set_zlabel('numero particelle rivelate')
-        ax1.set_title('Risposta del rivelatore in funzione dell\'energia per diversi angoli rispetto alla verticale ')
+        ax1.set_title('Risposta del rivelatore in funzione dell\'energia')
         ax1.set_yticks(angoli)
         # Formattazione dell'asse X (energia) con notazione scientifica
         ax1.xaxis.set_major_formatter(ScalarFormatter())
@@ -96,19 +88,27 @@ def analisi_sciame():
    
         ax2.set_xlabel('Energia (MeV)')
         ax2.set_ylabel('Numero particelle rivelate')
-        ax2.set_title('Risposta del rivelatore in funzione dell\'energia per diversi angoli rispetto alla verticale ')
+        ax2.set_title('Risposta del rivelatore in funzione dell\'energia')
+        ax2.xaxis.set_major_formatter(ScalarFormatter())
+        ax2.xaxis.get_major_formatter().set_powerlimits((0, 1))
         ax2.legend()
         plt.show()
 
-        #plot quota-energia
+        fig = plt.figure()
+        ax = fig.add_subplot(projection='3d')
         for i, angolo in enumerate(angoli):
-            ang = df_risultati.loc[df_risultati['angolo']== angolo]
-            plt.plot(ang['energia'], ang['quotamin'], color=colori[i], label=f'Angolo={angolo}°' )
-        plt.xlabel('Energia (MeV)')
-        plt.ylabel('quota minima (cm)')
-        plt.title('Quota raggiunta in funzione dell\'energia iniziale per diversi angoli rispetto alla verticale')
-        plt.legend()
+            ang = df_risultati.loc[df_risultati['angolo']== angolo] #dataframe per i valori relativi a quell'angolo        
+            ax.bar(ang['energia'], ang['angolo'], zs=ang['num particelle rivelate'], zdir='y', color=colori[i], alpha=0.7)
+        ax.set_xlabel('Energia (MeV)')
+        ax.set_ylabel('Angolo')
+        ax.set_zlabel('Numero di particelle')
+        ax.legend()
+        ax.xaxis.set_major_formatter(ScalarFormatter())
+        ax.xaxis.get_major_formatter().set_powerlimits((0, 1))
+        ax.set_yticks(yticks)
         plt.show()
+
+
    
     if args.hisang == True:
         n=int(input('Scegliere il numero di angoli con cui fare la simulazione per ognuno dei 4 valori di energia. \n(I valori di energia e di angolo sono uniformemente spaziati nell\'intervallo tra valore minimo e massimo considerato)') )
@@ -120,19 +120,20 @@ def analisi_sciame():
         if not (s>=0 and s>=1):
             print('inserire un valore di s compreso tra 0 e 1')
 
-        print(f'simulazione effettuata per {n}6 angoli(°) compresi tra {ang_min} e {ang_max} e 4 valori di energia E (MeV), {E_min}<E<{E_max}, con passo {s}')
+        print(f'simulazione effettuata per {n} angoli compresi tra {ang_min}° e {ang_max}° e 4 valori di energia E (MeV), {int(E_min)}MeV<E<{int(E_max)}, con passo {s}')
         #creo il dataframe per contenere i risultati della simulazione
         df_risultati = pd.DataFrame(index=pd.MultiIndex.from_product([energie, angoli], names=['energia', 'angolo'])).reset_index()
         
         #per ogni coppia energia-angolo riempio il dataframe con il numero di particelle rivelate e la quota minima raggiunta
-        df_risultati[['num particelle rivelate', 'quotamin']] = pd.DataFrame(df_risultati.progress_apply(lambda x: sa.simulazione_sciame(x['energia'], s, x['angolo']), axis=1).tolist())
+        df_risultati['num particelle rivelate'] = pd.DataFrame(df_risultati.progress_apply(lambda x: sa.simulazione_sciame(x['energia'], s, x['angolo']), axis=1))
 
         print('il numero di particelle rivelate e la quota minima raggiunta per ogni coppia angolo-energia è:')
         for _, row in df_risultati.iterrows():
-            print(f"Angolo {row['angolo']}, Energia: {row['energia']}, numero particelle rivelate: {row['num particelle rivelate']}, quota minima: {row['quotamin']}")
+            print(f"Angolo {row['angolo']}, Energia: {row['energia']}, numero particelle rivelate: {row['num particelle rivelate']}")
         
         #istogramma 3D e 2D
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12,6), subplot_kw={'projection':'3d'})
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12,6))
+        ax1 = fig.add_subplot(1, 2, 1, projection='3d') 
 
         for i, energia in enumerate(energie):
             en = df_risultati.loc[df_risultati['energia']== energia] #dataframe per i valori relativi a quell'angolo
@@ -157,15 +158,6 @@ def analisi_sciame():
         ax2.legend()
         plt.show()
 
-        #plot quota minima-angolo
-        for i, energia in enumerate(energie):
-            en = df_risultati.loc[df_risultati['energia']== energia]
-            plt.plot(en['angolo'], en['quotamin'], color=colori[i], label=f'Energia={energia}MeV' )
-        plt.xlabel('Angolo (°)')
-        plt.ylabel('Quota minima (cm)')
-        plt.title('Quota raggiunta in funzione dell\'angolo rispetto alla verticale per diversi valori di energia')
-        plt.legend()
-        plt.show()
 
     if args.treD == True:
         n=int(input('scegliere il numero di valori di energia e angolo da considerare nella simulazione. \n(I valori di energia e di angolo sono uniformemente spaziati nell\'intervallo tra valore minimo e massimo considerato)'))
