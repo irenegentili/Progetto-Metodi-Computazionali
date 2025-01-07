@@ -7,6 +7,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.ticker import ScalarFormatter
 from tqdm.auto import tqdm
 import time
+from scipy.interpolate import griddata
 
 tqdm.pandas()
 
@@ -29,8 +30,8 @@ def analisi_sciame():
     """
     funzione che simula lo sciame per varie configurazioni di energia-angolo e ne rappresenta graficamente le proprietà.
 
-    - grafico num particelle rivelate in funzione dell'energia per 4 angoli differenti
-    - grafico num particelle rivelate in funzione dell'angolo per 4 valori di energia differenti
+    - grafico num particelle rivelate in funzione dell'energia e dell'angolo con istogrammi
+    - grafico scatter e contourf numero di particelle per le varie coppie energia-angolo
 
     """
 
@@ -41,72 +42,82 @@ def analisi_sciame():
     ang_max=45 #(°)
     ang_min=0 #(°)
 
+    #simulazione e raccolta dati
+    n=int(input('Scegliere il numero di valori di energia e di angoli \n(I valori di energia e di angolo sono uniformemente spaziati tra i valori massimi e minimi considerati)' ))
+    energie = np.linspace(E_min, E_max, n)
+    angoli = np.linspace(ang_min, ang_max, n)
+
+    
+    s = float(input('inserire il valore del passo di avanzamento (s) in frazioni di X0 (valore compreso tra 0 e 1)'))
+    if not (s>=0 and s>=1):
+        print('inserire un valore di s compreso tra 0 e 1')
+
+    print(f'simulazione effettuata per {n} valori di energia E, {int(E_min)}MeV<E<{int(E_max)}MeV e {n} valori di angoli compresi tra {ang_min}° e {ang_max}°, con passo {s}')
+
+    #creo il dataframe per contenere i risultati della simulazione
+    df_risultati = pd.DataFrame(index=pd.MultiIndex.from_product([energie, angoli], names=['energia', 'angolo'])).reset_index()
+    
+    #per ogni coppia energia-angolo riempio il dataframe con il numero di particelle rivelate
+    df_risultati['num particelle rivelate'] = pd.DataFrame(df_risultati.progress_apply(lambda x: sa.simulazione_sciame(x['energia'], s, x['angolo']), axis=1))
+
+    
+    print('il numero di particelle rivelate e la quota minima raggiunta per ogni coppia energia-angolo è:')
+    for _,row in df_risultati.iterrows():
+        print(f"Energia iniziale {row['energia']}, Angolo: {row['angolo']}, numero particelle rivelate: {row['num particelle rivelate']}")
+
     if args.hisen == True:
 
-        n=int(input('Scegliere il numero di valori di energia con cui fare la simulazione per ognuno degli angoli considerati: [0°,15°,30°,45°]. \n(I valori di energia e di angolo sono uniformemente spaziati tra i valori massimi e minimi considerati)') )
-        energie = np.linspace(E_min, E_max, n)
-        angoli = [ang_min, 15, 30, ang_max]#4 valori tra 0 e 45 gradi
+        fig = plt.figure(figsize=(12, 8))
+        graph=fig.add_gridspec(2, 2, height_ratios=[1, 1])
 
-        
-
-        s = float(input('inserire il valore del passo (s) in frazioni di X0 (valore compreso tra 0 e 1)'))
-        if not (s>=0 and s>=1):
-            print('inserire un valore di s compreso tra 0 e 1')
-
-        print(f'simulazione effettuata per {n} valori di energia E, {int(E_min)}MeV<E<{int(E_max)}MeV e 4 valori di angoli compresi tra {ang_min}° e {ang_max}°, con passo {s}')
-        #creo il dataframe per contenere i risultati della simulazione
-        df_risultati = pd.DataFrame(index=pd.MultiIndex.from_product([energie, angoli], names=['energia', 'angolo'])).reset_index()
-        
-        #per ogni coppia energia-angolo riempio il dataframe con il numero di particelle rivelate e la quota minima raggiunta
-        df_risultati['num particelle rivelate'] = pd.DataFrame(df_risultati.progress_apply(lambda x: sa.simulazione_sciame(x['energia'], s, x['angolo']), axis=1))
-
-        
-        print('il numero di particelle rivelate e la quota minima raggiunta per ogni coppia energia-angolo è:')
-        for _,row in df_risultati.iterrows():
-            print(f"Energia iniziale {row['energia']}, Angolo: {row['angolo']}, numero particelle rivelate: {row['num particelle rivelate']}")
-
-        #istogramma 3D e 2D
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12,6))
-        ax1 = fig.add_subplot(1, 2, 1, projection='3d') 
+        ax1 = fig.add_subplot(graph[0 , 0], projection='3d') 
+        ax4= fig.add_subplot(graph[0 , 1], projection ='3d')
+        ax2 = fig.add_subplot(graph[1, 0])  # Istogramma seconda riga a sinistra
+        ax3 = fig.add_subplot(graph[1, 1])  # Istogramma seconda riga a destra 
 
         for i, angolo in enumerate(angoli):
             ang = df_risultati.loc[df_risultati['angolo']== angolo] #dataframe per i valori relativi a quell'angolo
-            ax1.bar3d(ang['energia'], [angolo] * len(ang['energia']), np.zeros(len(ang['energia'])),
-                dx=np.full(len(ang['energia']),750), dy=np.full(len(ang['angolo']), 4),
+            ax1.bar3d(ang['energia'], [angolo] * len(ang['energia']), np.zeros(len(ang['energia'])), dx=np.full(len(ang['energia']),750), dy=np.full(len(ang['angolo']), 5),
                     dz=ang['num particelle rivelate'], color=colori[i], alpha=0.6)
             
             ax2.hist (ang['energia'], bins=20, weights = ang['num particelle rivelate'], range=(1e6 -5, 1e8 +5), color=colori[i], alpha=0.5, label=f'Angolo={angolo}°' )
+        for i, energia in enumerate(energie):
+            en = df_risultati.loc[df_risultati['energia']== energia] #dataframe per i valori relativi a quell'energia
+            ax3.hist (en['angolo'], bins=5, weights = en['num particelle rivelate'], range=(-2, 47), color=colori[i], alpha=0.5, label=f'Energia={energia}MeV' )
+            
+            ax4.bar3d(en['angolo'], [energia] * len(en['angolo']), np.zeros(len(en['angolo'])), dx=np.full(len(en['angolo']),3), dy=np.full(len(en['energia']), 750),
+                    dz=en['num particelle rivelate'], color=colori[i], alpha=0.6)
+    
+
 
         ax1.set_xlabel('Energia (MeV)')
         ax1.set_ylabel('angoli (°)')
         ax1.set_zlabel('numero particelle rivelate')
-        ax1.set_title('Risposta del rivelatore in funzione dell\'energia')
         ax1.set_yticks(angoli)
-        # Formattazione dell'asse X (energia) con notazione scientifica
-        ax1.xaxis.set_major_formatter(ScalarFormatter())
-        ax1.xaxis.get_major_formatter().set_powerlimits((0, 1)) # Usa notazione scientifica per valori grandi
+        ax1.xaxis.set_major_formatter(ScalarFormatter()) # Formattazione dell'asse x (energia) con notazione scientifica
+        ax1.xaxis.get_major_formatter().set_powerlimits((0, 1))
    
         ax2.set_xlabel('Energia (MeV)')
         ax2.set_ylabel('Numero particelle rivelate')
-        ax2.set_title('Risposta del rivelatore in funzione dell\'energia')
         ax2.xaxis.set_major_formatter(ScalarFormatter())
         ax2.xaxis.get_major_formatter().set_powerlimits((0, 1))
         ax2.legend()
+
+        ax3.set_xlabel('Angolo (°)')
+        ax3.set_ylabel('Numero particelle rivelate')
+        ax3.legend()
+
+        ax4.set_xlabel('Angoli (°)')
+        ax4.set_ylabel('Energia (MeV)')
+        ax4.set_zlabel('Numero particelle rivelate')
+        ax4.set_yticks(angoli)
+        ax4.yaxis.set_major_formatter(ScalarFormatter()) # Formattazione dell'asse yy (energia) con notazione scientifica
+        ax4.yaxis.get_major_formatter().set_powerlimits((0, 1))
+
+        plt.suptitle('Numero di particelle rivelate in funzione dell\'energia e dell\'angolo', fontsize=16)
+        
         plt.show()
 
-        fig = plt.figure()
-        ax = fig.add_subplot(projection='3d')
-        for i, angolo in enumerate(angoli):
-            ang = df_risultati.loc[df_risultati['angolo']== angolo] #dataframe per i valori relativi a quell'angolo        
-            ax.bar(ang['energia'], ang['angolo'], zs=ang['num particelle rivelate'], zdir='y', color=colori[i], alpha=0.7)
-        ax.set_xlabel('Energia (MeV)')
-        ax.set_ylabel('Angolo')
-        ax.set_zlabel('Numero di particelle')
-        ax.legend()
-        ax.xaxis.set_major_formatter(ScalarFormatter())
-        ax.xaxis.get_major_formatter().set_powerlimits((0, 1))
-        ax.set_yticks(yticks)
-        plt.show()
 
 
    
@@ -160,6 +171,7 @@ def analisi_sciame():
 
 
     if args.treD == True:
+        """ 
         n=int(input('scegliere il numero di valori di energia e angolo da considerare nella simulazione. \n(I valori di energia e di angolo sono uniformemente spaziati nell\'intervallo tra valore minimo e massimo considerato)'))
         angoli = np.linspace(ang_min, ang_max, n)      
         energie = np.linspace(E_min, E_max, n)
@@ -168,38 +180,38 @@ def analisi_sciame():
         if not (s>=0 and s>=1):
             print('inserire un valore di s compreso tra 0 e 1')
 
-        print(f'simulazione effettuata per {n} valori di energia E(MeV), {E_min}<E{E_max} e angolo (°) compresi tra {ang_min} e {ang_max}, con passo {s}')
+        print(f'simulazione effettuata per {n} valori di energia E(MeV), {int(E_min)})<E<{int(E_max)} e angolo (°) compresi tra {ang_min} e {ang_max}, con passo {s}')
+
         #creo il dataframe per contenere i risultati della simulazione
         df_risultati = pd.DataFrame(index=pd.MultiIndex.from_product([energie, angoli], names=['energia', 'angolo'])).reset_index()
         
         #per ogni coppia energia-angolo riempio il dataframe con il numero di particelle rivelate e la quota minima raggiunta
-        df_risultati[['num particelle rivelate', 'quotamin']] = pd.DataFrame(df_risultati.progress_apply(lambda x: sa.simulazione_sciame(x['energia'], angolo=x['angolo']), axis=1).tolist())
+        df_risultati['num particelle rivelate'] = pd.DataFrame(df_risultati.progress_apply(lambda x: sa.simulazione_sciame(x['energia'], s, x['angolo']), axis=1))
 
         print('il numero di particelle rivelate e la quota minima raggiunta per ogni coppia angolo-energia è:')
-        for index, row in df_risultati.iterrows():
-            print(f"Angolo {row['angolo']}, Energia: {row['energia']}, numero particelle rivelate: {row['num particelle rivelate']}, quota minima: {row['quotamin']}")
+        for _, row in df_risultati.iterrows():
+            print(f"Angolo {row['angolo']}, Energia: {row['energia']}, numero particelle rivelate: {row['num particelle rivelate']}")
+        """
         
+        #grafico scatter e contourf
+        fig, axs = plt.subplots(1, 2, figsize=(14, 6), constrained_layout=True)
+        sc=axs[0].scatter(df_risultati['energia'], df_risultati['angolo'], marker='o', c=df_risultati['num particelle rivelate'], cmap='plasma')
+        axs[0].set_xlabel('Energia (MeV)')
+        axs[0].set_ylabel('Angolo (°)')
 
-        sc=plt.scatter(df_risultati['energia'], df_risultati['angolo'], marker='o', c=df_risultati['num particelle rivelate'], cmap='viridis')
-        plt.xlabel('Energia (MeV)')
-        plt.ylabel('Angolo (°)')
-        plt.title('Numero di particelle rivelate in funzione dell\'energia e dell\'angolo')
-        cbar = plt.colorbar(sc)
+        E, A = np.meshgrid(np.unique(df_risultati['energia']), np.unique(df_risultati['angolo']))
+        # Interpolazione per riempire la griglia
+        Z = griddata((df_risultati['energia'], df_risultati['angolo']),df_risultati['num particelle rivelate'],(E, A),method='cubic')
+
+        axs[1].contourf(E, A, Z, levels=20, cmap='plasma')
+        axs[1].set_xlabel("Energia (MeV)")
+        axs[1].set_ylabel("Angolo (°)")
+
+        cbar = fig.colorbar(sc, ax=axs, orientation='vertical', shrink=0.9)
         cbar.set_label('Numero di particelle rivelate')
+        plt.suptitle('Numero di particelle rivelate in funzione dell\'energia e dell\'angolo', fontsize=16)
         plt.show()
-
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-        sc= ax.scatter(df_risultati['energia'], df_risultati['angolo'], df_risultati['quota'], c=df_risultati['num particelle rivelate'], cmap='plasma', s=30)
-        ax.set_xlabel('Energia (MeV)')
-        ax.set_ylabel('Angolo (°)')
-        ax.set_zlabel('Quota (cm)')
-        ax.set_title('Quota e numero di particelle in funzione di energia e angolo')
-        ax.xaxis.set_major_formatter(ScalarFormatter())
-        ax.xaxis.get_major_formatter().set_powerlimits((0, 1)) 
-        cbar = plt.colorbar(sc)
-        cbar.set_label('Numero di Particelle')
-        plt.show()
+        
 
 
 if __name__ == "__main__":
