@@ -15,15 +15,17 @@ Successivamente per il primo grafico il programma richiede di inserire in ordine
 - il numero di valori di energia da considerare (uniformemente spaziati tra 1 TeV e 100 TeV) per ognuno dei 4 angoli (anche essi uniformemente spaziati tra 0° e 45°)
 - il passo s in frazioni di X0 (il valore deve essere compreso tra 0 e 1 e il programma lo richiede fino a che il valore inserito sia in questo intervallo)
 - se salvare l'immagine ottenuta o meno (va digitato Yes o No e il programma lo richiede fino a che la stringa insirita sia Yes o No)
+
 Per il secondo il programma richiede:
 - il numero di angoli da considerare (uniformemente spaziati tra 0° e 45°) per ognuno dei 4 valori di energia (anche essi uniformemente spaziati tra 1 TeV e 100 TeV)
 - il passo s in frazioni di X0 (il valore deve essere compreso tra 0 e 1 e il programma lo richiede fino a che il valore inserito sia in questo intervallo)
 - se salvare l'immagine ottenuta o meno (va digitato Yes o No e il programma lo richiede fino a che la stringa insirita sia Yes o No)
+
 Per il terzo il programma richiede:
 - il numero di valori di energia (uniformemente spaziati tra 1 TeV e 100 TeV) e di angolo (anche essi uniformemente spaziati tra 0° e 45°) da considerare (il numero è lo stesso per le due
 grandezze).
 - il passo s in frazioni di X0 (il valore deve essere compreso tra 0 e 1 e il programma lo richiede fino a che il valore inserito sia in questo intervallo)
-- se salvare l'immagine ottenuta o meno (va digitato Yes o No e il programma lo richiede fino a che la stringa insirita sia Yes o No)
+- se salvare l'immagine ottenuta o meno (va digitato Yes o No e il programma lo richiede fino a che la stringa inserita sia Yes o No)
 
 Successivamente avviene la simulazione dello sciame usando le funzioni definite in sciame.py e i risultati vengono rappresentati nel grafico scelto. Se si sceglie di salvare i grafici,
 questi vengono salvati nella cartella contenente lo script.
