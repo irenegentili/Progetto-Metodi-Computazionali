@@ -46,11 +46,12 @@ def prob_coppia(s):
 
 def aggiungi_part(df, lista):
     """
-    funzione per aggiungere una nuova particella al dataframe dello sciame
+    funzione aggiungi_part(df,lista) per aggiungere nuove particelle al dataframe dello sciame
     df: dataframe
     lista: lista di tuple con dati delle nuove particelle
 
-    return dataframe con le particelle aggiornate
+    return pd.concat([df,df_new], ingnore_index=True) dataframe dato dall'unione del dataframe precedente
+    e di quello contenente le nuove particelle
     """
     #se la lista è vuota restituisce df
     if not lista: 
@@ -59,6 +60,7 @@ def aggiungi_part(df, lista):
     #creo un dataframe a partire dalla lista
     df_new = pd.DataFrame(lista, columns=['tipo', 'energia'])
 
+    #controllo i due dataframe per un corretto funzionamento di concat
     df_new = df_new.dropna(how='all') #elimino le righe contenenti NaN
     df_new = df_new.dropna(axis=1, how='all') #elimino le colonne contenenti NaN
     df = df.dropna(how='all') #elimino le righe contenenti NaN
@@ -68,12 +70,12 @@ def aggiungi_part(df, lista):
 
 def genera_particella_iniziale(E0):
     """
-    funzione che genera in modo casuale la particella iniziale, scegliendo tra 
+    funzione genera_particella_iniziale(E0) che genera in modo casuale la particella iniziale, scegliendo tra 
     elettrone, positrone, fotone.
 
     E0: energia iniziale della particella
 
-    return particella: un dizionario dove si specifica il tipo e l'energia della particella iniziale
+    return particella: una tupla dove si specifica il tipo e l'energia della particella iniziale
     """
     tipo= np.random.choice(['elettrone', 'positrone', 'fotone'])
     particella = (tipo, E0)
@@ -82,7 +84,7 @@ def genera_particella_iniziale(E0):
 
 def simulazione_sciame(E0, s=0.1, angolo=0):
     """
-    Funzione che simula uno sciame di particelle
+    Funzione simulazione_sciame(E0, s=0.1, angolo=0) che simula uno sciame di particelle
 
     E0: energia iniziale particella (MeV)
     s=0.1: passo di avanzamento della simulazione in frazione di X0 (compreso tra 0 e 1), 0.1 è il valore di default
@@ -108,7 +110,7 @@ def simulazione_sciame(E0, s=0.1, angolo=0):
         sciame = sciame.reset_index(drop=True)
         #creo una lista per memorizzare le tuple (indice,nuovi valori energie delle particelle)
         new_energie= [] 
-        #ciclo for sulle righe del dataframe sciame
+        #ciclo for sulle righe del dataframe sciame come se fossero tuple
         for particella in sciame.itertuples():
             index = particella.Index  # Indice della riga
             energy = particella.energia  # Energia della particella
@@ -126,7 +128,7 @@ def simulazione_sciame(E0, s=0.1, angolo=0):
                     en_dimin= energy - min_ioniz * s * X0
                     E_fin = en_dimin #introduco questa variabile per tenere conto dei cambiamenti dell'energia
                 else:
-                    #pongo l'energia=0 così da usare questa condizione per eliminare la particella alla fine
+                    #pongo E_fin=0 così da usare questa condizione per eliminare la particella alla fine
                     E_fin=0
                     
 
@@ -139,7 +141,7 @@ def simulazione_sciame(E0, s=0.1, angolo=0):
             if tipo == 'fotone':
                 if energy > en_coppia:
                     if np.random.uniform() < prob_coppia(s):
-                        #pongo l'energia=0 così da usare questa condizione per eliminare la particella alla fine
+                        #pongo energy=0 così da usare questa condizione per eliminare il fotone alla fine
                         new_energie.append((index, 0))
                         new_particelle.append(("elettrone", energy/2)) 
                         new_particelle.append(("positrone", energy/2))     
