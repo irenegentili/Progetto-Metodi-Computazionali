@@ -1,13 +1,13 @@
 import numpy as np
 import pandas as pd
 import argparse
-import sciame as sa
+import sciame as sa #importo le funzioni per simulare lo sciame
 import matplotlib.pyplot  as plt
-from matplotlib.ticker import ScalarFormatter
-from tqdm.auto import tqdm
-from scipy.interpolate import griddata
+from matplotlib.ticker import ScalarFormatter #per formattare gli assi nei grafici
+from tqdm.auto import tqdm #per la barra di avanzamento
+from scipy.interpolate import griddata #usato per il terzo grafico 
 
-tqdm.pandas()
+tqdm.pandas() #per l'uso della barra di avanzamento con un dataframe
 
 
 def parse_arguments():
@@ -26,7 +26,7 @@ marks=['.', 'P', '*', 'D']
 
 def media(row, s, volte):
     """
-    funzione che calcola la media e la deviazione standard del numero di particelle rivelate per una data 
+    funzione media(row,s,volte) che calcola la media e la deviazione standard del numero di particelle rivelate per una data 
     configurazione energia-angolo.
     row: riga considerata del dataframe
     s: passo di avanzamento in frazioni di X0
@@ -35,36 +35,37 @@ def media(row, s, volte):
     esegue la simulazione per la coppia energia - angolo per il numero di volte deciso
     successivamente si esegue media e deviazione standard della media dei dati ottenuti
 
-    return pd.Series([mean, std_mean]) restituisce come una serie di pandas media e deviazione standard della media
+    return pd.Series([mean, std_mean, risultati]) restituisce come una serie di pandas media, deviazione standard della media e risultati ottenuti dalle simulazioni
+    per una coppia energia-angolo 
     """
     risultati = [sa.simulazione_sciame(row['energia'], s, row['angolo']) for _ in range(volte)]
     std_med = np.std(risultati)/np.sqrt(volte)
     mean = np.mean(risultati)
-    return pd.Series([mean, std_med])
+    return pd.Series([mean, std_med, risultati])
 
 def analisi_sciame():
     """
-    funzione che simula lo sciame per varie configurazioni di energia-angolo e ne rappresenta graficamente i risultati.
+    funzione analisi_sciame() che simula lo sciame per varie configurazioni di energia-angolo e ne rappresenta graficamente i risultati.
 
-    --hisen: istogramma e scatter num particelle rivelate- energia per 4 angoli 
-    --hisang: istogramma e scatter num particelle rivelate - angolo per 4 energie
-    --color: grafico scatter e contourf numero di particelle per le varie coppie energia-angolo
+    --hisen: istogramma e scatter numero medio di particelle rivelate- energia per 4 angoli 
+    --hisang: istogramma e scatter numero medio di particelle rivelate - angolo per 4 energie
+    --color: grafico scatter e contourf numero medio di particelle per le varie coppie energia-angolo
 
     """
 
     args=parse_arguments()
 
-    E_min = 1.0e6  # Energia minima (1 TeV =1e6 MeV)
-    E_max = 1.0e8  # Energia massima (100 TeV = 1e8 MeV)
-    ang_max=45 #(°)
-    ang_min=0 #(°)
+    E_min = 1.0e6  # Energia minima (MeV) (1 TeV =1e6 MeV)
+    E_max = 1.0e8  # Energia massima (MeV) (100 TeV = 1e8 MeV)
+    ang_max=45 #angolo massimo rispetto alla verticale (°)
+    ang_min=0 #angolo minimo rispetto alla verticale (°)
 
 
 
     if args.hisen == True:
 
         #simulazione e raccolta dati
-        print(f'Risposta rivelatore in funzione dell\'energia iniziale (E) per 4 valori dell\'angolo rispetto alla verticale (θ) con {E_min:.1e} MeV<E<{E_max:.1e} MeV e {ang_min}°<θ<{ang_max}°')
+        print(f'Risposta in media del rivelatore in funzione dell\'energia iniziale (E) per 4 valori dell\'angolo rispetto alla verticale (θ) con {E_min:.1e} MeV<E<{E_max:.1e} MeV e {ang_min}°<θ<{ang_max}°')
 
         n=int(input('Scegliere il numero di valori di E da considerare per ognuno dei 4 valori di θ considerati. (I valori sono uniformemente spaziati tra i valori massimi e minimi considerati) ' ))
         
@@ -77,28 +78,39 @@ def analisi_sciame():
         while not (s>=0 and s<=1):
             s= float(input('Inserire un valore di s compreso tra 0 e 1  '))
         
-        save= input('Prima di iniziare la simulazione scegliere se salvare o meno il grafico prodotto (Yes or No) ')
+        save= input('Prima di iniziare la simulazione scegliere se salvare o meno il grafico numero medio di particelle in funzione di E prodotto (Yes or No) ')
         while save != 'Yes' and save !='No':
             save= input('Scegliere se salvare o meno il grafico prodotto digitando Yes o No ')   
         
         if save == 'Yes':
             path=input("Specificare il pathname dell'immagine da salvare ")
 
-        print(f'Inizio simulazione per {n} valori di E per ogni θ con passo {s}')
+        print(f'Inizio simulazione per {n} valori di E per ogni θ con passo {s}, per ogni coppia si eseguono {x} simulazioni di cui si calcola media e deviazione standard della media')
 
         #creo il dataframe per contenere i risultati della simulazione
         df_risultati = pd.DataFrame(index=pd.MultiIndex.from_product([energie, angoli], names=['energia', 'angolo'])).reset_index()
         
         #per ogni coppia energia-angolo riempio il dataframe con una colonna con la media di particelle rivelate e una con la deviazione standard
-        df_risultati[['num particelle rivelate', 'std_mean']] = df_risultati.progress_apply(lambda y: media(y, s, x), axis=1)
+        df_risultati[['num particelle rivelate', 'std_mean', 'risultati']] = df_risultati.progress_apply(lambda y: media(y, s, x), axis=1)
 
         
         print('il numero di particelle rivelate per ogni coppia E-θ è:')
 
-        print(f"{'E (MeV)':<10}{'θ (°)':<6}{'Particelle rivelate':<20}")
+        print(f"{'E (MeV)':<10}{'θ (°)':<6}{'Media particelle rivelate e SDOM':<20}")
         for _,row in df_risultati.iterrows():
             print(f"{int(row['energia']):<.2e}  {int(row['angolo']):<6} {round(row['num particelle rivelate'])} \u00b1 {row["std_mean"]:.1g}")
         
+        #rappresento la distribuzione del numero di particelle rivelate
+        for _, row in df_risultati.iterrows():
+            energia = row['energia']
+            angolo = row['angolo']
+            risultati = row['risultati']
+            plt.hist(risultati, bins=30, range=(min(risultati)-4, max(risultati)+4), color='maroon', alpha=0.6)
+            plt.xlabel('Numero di particelle rivelate')
+            plt.ylabel('Volte in cui sono state rivelate')
+            plt.title(f'Distribuzione del numero di particelle rivelate per E={energia:.2e} e θ={angolo}°')
+            plt.show()
+
         #rappresento i dati
         fig1 = plt.figure(figsize=plt.figaspect(0.5))
         ax1 = fig1.add_subplot(1, 2, 1, projection='3d') #primo grafico istogramma 3D
@@ -135,13 +147,14 @@ def analisi_sciame():
         if save == 'Yes':
             fig1.savefig(path)
         plt.show()
+        
 
 
 
     if args.hisang == True:
         
         #simulazione e raccolta dati
-        print(f'Risposta rivelatore in funzione dell\'angolo rispetto alla verticale (θ) per 4 valori dell\'energia (E) con {E_min:.1e} MeV<E<{E_max:.1e} MeV e {ang_min}°<θ<{ang_max}°')
+        print(f'Risposta in media del rivelatore in funzione dell\'angolo rispetto alla verticale (θ) per 4 valori dell\'energia (E) con {E_min:.1e} MeV<E<{E_max:.1e} MeV e {ang_min}°<θ<{ang_max}°')
 
         n=int(input('Scegliere il numero di valori di θ da considerare per ognuno dei 4 valori di E considerati. (I valori sono uniformemente spaziati tra i valori massimi e minimi considerati)  ' ))
         
@@ -154,7 +167,7 @@ def analisi_sciame():
         while not (s>=0 and s<=1):
             s= float(input('Inserire un valore di s compreso tra 0 e 1  '))
 
-        save= input('Prima di iniziare la simulazione scegliere se salvare o meno il grafico prodotto (Yes or No) ')
+        save= input('Prima di iniziare la simulazione scegliere se salvare o meno il grafico numero medio di particelle in funzione di θ prodotto (Yes or No) ')
         while save != 'Yes' and save !='No':
             save= input('Scegliere se salvare o meno il grafico prodotto digitando Yes or No ')   
                 
@@ -162,25 +175,36 @@ def analisi_sciame():
             path=input("Specificare il pathname dell'immagine da salvare ")
             
 
-        print(f'Inizio simulazione per {n} valori di θ per ogni E con passo {s}')
+        print(f'Inizio simulazione per {n} valori di θ per ogni E con passo {s}, per ogni coppia si eseguono {x} simulazioni di cui si calcola media e deviazione standard della media')
 
         #creo il dataframe per contenere i risultati della simulazione
         df_risultati = pd.DataFrame(index=pd.MultiIndex.from_product([energie, angoli], names=['energia', 'angolo'])).reset_index()
         
         #per ogni coppia energia-angolo riempio il dataframe con una colonna con la media di particelle rivelate e una con la deviazione standard
-        df_risultati[['num particelle rivelate', 'std_mean']] = df_risultati.progress_apply(lambda y: media(y, s, x), axis=1)
+        df_risultati[['num particelle rivelate', 'std_mean', 'risultati']] = df_risultati.progress_apply(lambda y: media(y, s, x), axis=1)
 
         
         print('il numero di particelle rivelate per ogni coppia θ-E è:')
 
-        print(f"{'E (MeV)':<10}{'θ (°)':<6}{'Particelle rivelate':<20}")
+        print(f"{'E (MeV)':<10}{'θ (°)':<6}{'Media particelle rivelate e SDOM':<20}")
         for _,row in df_risultati.iterrows():
             print(f"{int(row['energia']):<.2e}  {int(row['angolo']):<6} {round(row['num particelle rivelate'])} \u00b1 {row["std_mean"]:.1g}")
         
-    
+        #rappresento la distribuzione del numero di particelle rivelate
+        for _, row in df_risultati.iterrows():
+            energia = row['energia']
+            angolo = row['angolo']
+            risultati = row['risultati']
+            plt.hist(risultati, bins=30, range=(min(risultati)-4, max(risultati)+4), color='maroon', alpha=0.6)
+            plt.xlabel('Numero di particelle rivelate')
+            plt.ylabel('Volte in cui sono state rivelate')
+            plt.title(f'Distribuzione del numero di particelle rivelate per E={energia:.2e} e θ={angolo}°')
+            plt.show()
+
+        #rappresento i dati
         fig2 = plt.figure(figsize=plt.figaspect(0.5))
-        axs1 = fig2.add_subplot(1, 2, 1, projection='3d')
-        axs2 = fig2.add_subplot(1, 2, 2)
+        axs1 = fig2.add_subplot(1, 2, 1, projection='3d') #primo grafico istogramma 3D
+        axs2 = fig2.add_subplot(1, 2, 2) #secondo grafico scatter
         fig2.subplots_adjust(wspace=0.5)
 
         for i, energia in enumerate(energie):
@@ -217,7 +241,7 @@ def analisi_sciame():
 
                 
         #simulazione e raccolta dati
-        print(f'Risposta rivelatore per varie coppie energia (E) - angolo rispetto alla verticale (θ) con {E_min:.1e} MeV<E<{E_max:.1e} MeV e {ang_min}°<θ<{ang_max}°')
+        print(f'Risposta in media del rivelatore per varie coppie energia (E) - angolo rispetto alla verticale (θ) con {E_min:.1e} MeV<E<{E_max:.1e} MeV e {ang_min}°<θ<{ang_max}°')
 
         n=int(input('Scegliere il numero di valori di θ e di E da considerare. (I valori sono uniformemente spaziati tra i valori massimo e minimo considerati)  ' ))
         
@@ -230,7 +254,7 @@ def analisi_sciame():
         while not (s>=0 and s<=1):
             s= float(input('Inserire un valore di s compreso tra 0 e 1  '))
         
-        save= input('Prima di iniziare la simulazione scegliere se salvare o meno il grafico prodotto (Yes or No) ')
+        save= input('Prima di iniziare la simulazione scegliere se salvare o meno il grafico numero medio di particelle in funzione di θ e E prodotto (Yes or No) ')
         while save != 'Yes' and save !='No':
             save= input('Scegliere se salvare o meno il grafico prodotto digitando Yes or No ')   
                 
@@ -238,21 +262,31 @@ def analisi_sciame():
             path=input("Specificare il pathname dell'immagine da salvare ")
             
 
-        print(f'Inizio simulazione per {n} valori di E e di θ con passo {s}')
+        print(f'Inizio simulazione per {n} valori di E e di θ con passo {s}, per ogni coppia si eseguono {x} simulazioni di cui si calcola media e deviazione standard della media')
 
         #creo il dataframe per contenere i risultati della simulazione
         df_risultati = pd.DataFrame(index=pd.MultiIndex.from_product([energie, angoli], names=['energia', 'angolo'])).reset_index()
         
         #per ogni coppia energia-angolo riempio il dataframe con una colonna con il numero di particelle rivelate
-        df_risultati[['num particelle rivelate', 'std_mean']] = df_risultati.progress_apply(lambda y: media(y, s, x), axis=1)
+        df_risultati[['num particelle rivelate', 'std_mean', 'risultati']] = df_risultati.progress_apply(lambda y: media(y, s, x), axis=1)
 
         
         print('il numero di particelle rivelate per ogni coppia E-θ è:')
 
-        print(f"{'E (MeV)':<10}{'θ (°)':<6}{'Particelle rivelate':<20}")
+        print(f"{'E (MeV)':<10}{'θ (°)':<6}{'Media particelle rivelate e SDOM':<20}")
         for _,row in df_risultati.iterrows():
             print(f"{int(row['energia']):<.2e}  {int(row['angolo']):<6} {round(row['num particelle rivelate'])} \u00b1 {row["std_mean"]:.1g}")
         
+        #rappresento la distribuzione del numero di particelle rivelate
+        for _, row in df_risultati.iterrows():
+            energia = row['energia']
+            angolo = row['angolo']
+            risultati = row['risultati']
+            plt.hist(risultati, bins=30, range=(min(risultati)-4, max(risultati)+4), color='maroon', alpha=0.6)
+            plt.xlabel('Numero di particelle rivelate')
+            plt.ylabel('Volte in cui sono state rivelate')
+            plt.title(f'Distribuzione del numero di particelle rivelate per E={energia:.2e} e θ={angolo}°')
+            plt.show()
         
         #grafico scatter e contourf
         fig3, axs = plt.subplots(1, 2, figsize=(14, 6), constrained_layout=True)
@@ -261,6 +295,7 @@ def analisi_sciame():
         axs[0].set_ylabel(r'$\theta$ (°)')
         axs[0].xaxis.set_major_formatter(ScalarFormatter())
         axs[0].xaxis.get_major_formatter().set_powerlimits((0, 1))
+        axs[0].set_title('Risultati ottenuti dalla simulazione')
 
         #creo la griglia con valori di energia e angolo per poi interpolare
         E, A = np.meshgrid(np.unique(df_risultati['energia']), np.unique(df_risultati['angolo']))
@@ -271,13 +306,12 @@ def analisi_sciame():
         axs[1].set_ylabel(r"$\theta$ (°)")
         axs[1].xaxis.set_major_formatter(ScalarFormatter())
         axs[1].xaxis.get_major_formatter().set_powerlimits((0, 1))
+        axs[1].set_title(r'Andamento del numero di particelle per le varie configurazioni di E e $\theta$')
 
         #definisco una colorbar unica
         cbar = fig3.colorbar(sc, ax=axs, orientation='vertical', shrink=0.9)
         cbar.set_label('Numero di particelle rivelate')
-        cbar.formatter.set_powerlimits((0, 1)) 
         cbar.ax.tick_params(axis='y', labelsize=10)
-        cbar.ax.yaxis.set_major_formatter(ScalarFormatter())
 
         fig3.suptitle(r"Numero di particelle rivelate in funzione dell'energia (E) e dell'angolo ($\theta$)", fontsize=16)
         
