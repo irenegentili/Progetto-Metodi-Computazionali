@@ -98,7 +98,7 @@ def analisi_sciame():
 
         print(f"{'E (MeV)':<10}{'θ (°)':<6}{'Media particelle rivelate e SDOM':<20}")
         for _,row in df_risultati.iterrows():
-            print(f"{int(row['energia']):<.2e}  {int(row['angolo']):<6} {round(row['num particelle rivelate'])} +/- {row["std_mean"]:.1g}")
+            print(f"{int(row['energia']):<.2e}  {int(row['angolo']):<6} {round(row['num particelle rivelate'])} +/- {row['std_mean']:.1g}")
         
         #rappresento la distribuzione del numero di particelle rivelate
         for _, row in df_risultati.iterrows():
@@ -188,7 +188,7 @@ def analisi_sciame():
 
         print(f"{'E (MeV)':<10}{'θ (°)':<6}{'Media particelle rivelate e SDOM':<20}")
         for _,row in df_risultati.iterrows():
-            print(f"{int(row['energia']):<.2e}  {int(row['angolo']):<6} {round(row['num particelle rivelate'])} +/- {row["std_mean"]:.1g}")
+            print(f"{int(row['energia']):<.2e}  {int(row['angolo']):<6} {round(row['num particelle rivelate'])} +/- {row['std_mean']:.1g}")
         
         #rappresento la distribuzione del numero di particelle rivelate
         for _, row in df_risultati.iterrows():
@@ -275,7 +275,7 @@ def analisi_sciame():
 
         print(f"{'E (MeV)':<10}{'θ (°)':<6}{'Media particelle rivelate e SDOM':<20}")
         for _,row in df_risultati.iterrows():
-            print(f"{int(row['energia']):<.2e}  {int(row['angolo']):<6} {round(row['num particelle rivelate'])} +/- {row["std_mean"]:.1g}")
+            print(f"{int(row['energia']):<.2e}  {int(row['angolo']):<6} {round(row['num particelle rivelate'])} +/- {row['std_mean']:.1g}")
         
         #rappresento la distribuzione del numero di particelle rivelate
         for _, row in df_risultati.iterrows():
